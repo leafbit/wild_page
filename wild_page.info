@@ -1,0 +1,5 @@
+name = Wild Page
+description = Provides a way to create arbitrary pages and menus for them.
+package = Other
+core = 7.x
+version = 1.1

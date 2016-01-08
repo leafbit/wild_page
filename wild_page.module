@@ -1,0 +1,149 @@
+<?php
+
+/**
+ * A hook invocation.
+ */
+function wild_page_menu() {
+  $items['admin/structure/wild_page'] = array(
+    'title' => 'Wild Page',
+    'page callback' => 'wild_page_admin',
+    'access arguments' => array('admin everything'),
+    'file' => 'wild_page_admin.inc'
+  );
+  $items['admin/structure/wild_page/list'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => 0,
+  );
+
+  $items['admin/structure/wild_page/add'] = array(
+    'title' => 'Add Wild Page',
+    'page callback' => 'wild_page_wrapper',
+    'page arguments' => array('edit', FALSE),
+    'access arguments' => array('admin everything'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'wild_page_admin.inc',
+    'weight' => 10,
+  );
+
+  $items['admin/structure/wild_page/%wild_page/edit'] = array(
+    'title' => 'Edit Wild Menu',
+    'page callback' => 'wild_page_wrapper',
+    'page arguments' => array('edit', 3),
+    'access arguments' => array('admin everything'),
+    'file' => 'wild_page_admin.inc'
+  );
+
+  $items['admin/structure/wild_page/%wild_page/delete'] = array(
+    'title' => 'Edit Wild Menu',
+    'page callback' => 'wild_page_wrapper',
+    'page arguments' => array('delete', 3),
+    'access arguments' => array('admin everything'),
+    'file' => 'wild_page_admin.inc'
+  );
+
+  $items['wild_page/%ctools_js/snippets'] = array(
+    'title' => 'Snippets',
+    'page callback' => 'wild_page_admin_snippets',
+    'page arguments' => array(1),
+    'access arguments' => array('admin everything'),
+    'file' => 'wild_page_admin.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+
+  whild_page_append_menus($items);
+
+  return $items;
+}
+
+function whild_page_append_menus(&$items){
+  $qh = db_select('wild_page', 'm')
+    ->fields('m')
+    ->condition('disabled', 1, '!=')
+    ->execute();
+  if (!$qh) return;
+  while($m = $qh->fetchObject()){
+    $items[$m->path] = array(
+      'title' => $m->title,
+      'page callback' => 'wild_page_page_view',
+      'page arguments' => array('wm:' . $m->wmid),
+      'access callback' => 'user_access',
+      'access arguments' => explode(',', $m->access_arguments),
+      'type' => $m->type,
+    );
+  }
+}
+
+function wild_page_page_view($id) {
+  $ids = explode(':', $id);
+  $id = end($ids);
+  $data = wild_page_load($id);
+  return php_eval($data->data);
+  //return 'hi';
+}
+
+/**
+ * Saves a definition of wild page.
+ */
+function wild_page_save($v){
+
+  if (isset($v['wmid']) && $v['wmid']) {
+    $rz = drupal_write_record('wild_page', $v, array('wmid'));
+  }
+  else {
+    if (isset($v['wmid'])) unset($v['wmid']);
+    $rz = drupal_write_record('wild_page', $v);
+  }
+
+
+  if ($v['type'] == MENU_CALLBACK) {
+    $menu_link = array(
+      'link_path' => $v['path'],
+      'link_title' => $v['title'],
+      'menu_name' => $v['menu_name'],
+      'weight' => $v['weight'],
+      'mlid' => $v['mlid'] ? $v['mlid'] : FALSE,
+    );
+    menu_link_save($menu_link);
+    db_update('wild_page')
+      ->fields(array(
+        'mlid' => $menu_link['mlid'],
+      ))
+      ->condition('wmid', $v['wmid'])
+      ->execute();
+  }
+  elseif ($v['mlid']) {
+    menu_link_delete($v['mlid']);
+    db_update('wild_page')
+      ->fields(array(
+        'mlid' => 0,
+      ))
+      ->condition('wmid', $v['wmid'])
+      ->execute();
+
+  }
+  menu_rebuild();
+  menu_cache_clear_all();
+}
+
+/**
+ * Load a wild page record.
+ */
+function wild_page_load($id) {
+  if (!$id) return FALSE;
+  $qh = db_select('wild_page', 'm')
+    ->fields('m')
+    ->condition('wmid', $id)
+    ->execute();
+  return $qh ? $qh->fetchObject() : NULL;
+}
+
+/**
+ * Delete wild page record.
+ */
+function wild_page_delete($wmid) {
+  $wm = wild_page_load($wmid);
+  db_delete('wild_page')->condition('wmid', $wmid)->execute();
+  if ($wm->mlid) menu_link_delete($wm->mlid);
+}

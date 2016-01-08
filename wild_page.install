@@ -1,0 +1,94 @@
+<?php
+
+/**
+ * Invoke hook_schema().
+ */
+function wild_page_schema() {
+  $schema['wild_page'] = array(
+    'description' => 'Wild page definition data',
+    'fields' => array(
+      'wmid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Primary key',
+      ),
+      'mlid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Menu link ID',
+      ),
+      'title' => array(
+        'type' => 'varchar',
+        'length' => 125,
+        'description' => 'Menu title',
+      ),
+      'path' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'description' => 'Menu path',
+        'not null' => TRUE,
+        'default' => 'path'
+      ),
+      'type' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Menu type',
+      ),
+      'access_callback' => array(
+        'type' => 'varchar',
+        'length' => 125,
+        'description' => 'Function to call as access callback',
+        'not null' => TRUE,
+        'default' => 'user_access',
+      ),
+      'access_arguments' => array(
+        'type' => 'text',
+        'not null' => TRUE,
+        'description' => 'Access callback function arguments.',
+      ),
+      'page_callback' => array(
+        'type' => 'varchar',
+        'length' => 125,
+        'description' => 'Function to call as access callback',
+        'not null' => TRUE,
+        'default' => 'wild_page_view_page',
+      ),
+      'data' => array(
+        'type' => 'text',
+        'description' => 'PHP code to execute.',
+      ),
+      'disabled' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'size' => 'tiny',
+        'default' => 0,
+        'description' => 'Disable this page definition',
+      ),
+      'weight' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'descritpion' => 'Weight of the menu link in the list of links',
+      ),
+    ),
+    'primary key' => array('wmid'),
+    'unique keys' => array(
+      'path' => array('path'),
+    ),
+  );
+  return $schema;
+}
+
+/**
+ * Append weight to the menu links on wild page definitions.
+ */
+function wild_page_update_7100() {
+  db_add_field('wild_page', 'weight', array(
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+    'description' => 'Weight of the menu link in the list of links',
+  ));
+}
